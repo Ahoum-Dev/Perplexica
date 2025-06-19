@@ -1,0 +1,65 @@
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    volumes:
+      - searxng-config:/etc/searxng:rw
+    environment:
+      - SEARXNG_HOST=0.0.0.0
+      - SEARXNG_PORT=8080
+    expose:
+      - "8080"
+    networks:
+      - perplexica-network
+    restart: unless-stopped
+
+  app:
+    image: itzcrazykns1337/perplexica:main
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    environment:
+      - SEARXNG_API_URL=http://searxng:8080
+      - DATA_DIR=/home/perplexica
+      - NODE_ENV=production
+      # General Configuration
+      - SIMILARITY_MEASURE=${SIMILARITY_MEASURE:-cosine}
+      - KEEP_ALIVE=${KEEP_ALIVE:-5m}
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      # Custom OpenAI Configuration
+      - CUSTOM_OPENAI_API_KEY=${CUSTOM_OPENAI_API_KEY}
+      - CUSTOM_OPENAI_API_URL=${CUSTOM_OPENAI_API_URL}
+      - CUSTOM_OPENAI_MODEL_NAME=${CUSTOM_OPENAI_MODEL_NAME}
+      # Ollama Configuration
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+      # LM Studio Configuration
+      - LM_STUDIO_API_URL=${LM_STUDIO_API_URL}
+      # API Endpoints
+      - SEARXNG_ENDPOINT=${SEARXNG_ENDPOINT}
+    expose:
+      - "3000"
+    networks:
+      - perplexica-network
+    volumes:
+      - backend-dbstore:/home/perplexica/data
+      - uploads:/home/perplexica/uploads
+    restart: unless-stopped
+    depends_on:
+      - searxng
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.perplexica.rule=Host(`${SERVICE_FQDN_APP}`)"
+      - "traefik.http.routers.perplexica.entrypoints=web"
+      - "traefik.http.services.perplexica.loadbalancer.server.port=3000"
+
+networks:
+  perplexica-network:
+
+volumes:
+  backend-dbstore:
+  uploads:
+  searxng-config: 
